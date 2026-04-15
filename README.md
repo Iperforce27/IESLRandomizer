@@ -18,3 +18,7 @@ by Iper
 
 - **v1**
     1. Now also randomizes DFs, MFs, FWs, CO and MG (4-3-3 formation)
+
+- **v2**
+    1. Added ability to choose a formation
+    2. Fixed the bug for which the same player would be picked twice in a row (hopefully)
