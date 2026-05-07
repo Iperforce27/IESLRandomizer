@@ -13,10 +13,6 @@ void randomPlayer(char* player, FILE* archive, int archDim)
         fgets(player, 100, archive);
     }
     fgets(player, 100, archive);
-    if (strcmp(*player, *(player-1)))
-    {
-        randomPlayer(player, archive, archDim);
-    }
 }
 
 int main()
@@ -75,7 +71,7 @@ int main()
     printf("\nCoach and manager\n\n%s%s", team[teamsize], team[teamsize+1]);
 
 
-    printf("\nPress NEWLINE to close");
+    printf("\nPress ENTER to close");
     scanf_s("%c%c");
 
     return 0;
