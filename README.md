@@ -1,5 +1,5 @@
 
-# IESL Randomizer (v2)  
+# IESL Randomizer 2(v1)  
 
 by Iper
 
@@ -21,4 +21,10 @@ by Iper
 
 - **v2**
     1. Added ability to choose a formation
-    2. Fixed the bug for which the same player would be picked twice in a row (hopefully)
+    2. ~~Fixed the bug for which the same player would be picked twice in a row (hopefully)~~
+
+- **2 v1**
+    1. Script completely remade in python (should now work on every system equally)
+    2. Now the same player cannot be present twice
+    3. It now has a GUI and is not a command line executable
+    4. Player list updated
