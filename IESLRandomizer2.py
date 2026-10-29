@@ -1,111 +1,143 @@
 from tkinter import *
+import openpyxl
 import random
+import zipfile
+from io import BytesIO
+from PIL import Image, ImageTk
 
-#turn txt files into lists
-GKs = open("GKs.txt", "r")
-DFs = open("DFs.txt", "r")
-MFs = open("MFs.txt", "r")
-FWs = open("FWs.txt", "r")
-MGs = open("MGs.txt", "r")
-COs = open("COs.txt", "r")
+#Class that represents the zip file for images
+class Archivio:
+    def __init__(self, path="Images.zip"):
+        self.z = zipfile.ZipFile(path)          # aperto una volta sola
+        self.nomi = set(self.z.namelist())
 
-GK_list = GKs.readlines() 
-DF_list = DFs.readlines()
-MF_list = MFs.readlines()
-FW_list = FWs.readlines()
-CO_list = COs.readlines() 
-MG_list = MGs.readlines()
+    def get(self, nome):
+        return Image.open(BytesIO(self.z.read(nome)))
 
-GKs.close()
-DFs.close()
-MFs.close()
-FWs.close()
-MGs.close()
-COs.close()
+    def __len__(self):
+        return len(self.nomi)
 
+    def close(self):
+        self.z.close()
+
+#Class that represents a player or staff
+class OC:
+    def __init__(self, name, team, image, arch):
+        self.name = name    #The player's name
+        self.team = team    #The player's team
+        if(image not in ['N/A', '#VALUE!']):
+            self.image = ImageTk.PhotoImage(arch.get(f'{image}.webp').resize([50,50]))  #The player's image
+        else:
+            self.image = image  #No image
+        pass
+
+excel_file = None   #where the excel file is stored
 
 playerList = [] #List of players extracted
 staffList = []  #List of coach and manager extracted
-DFnumb = None   #Number of defenders to extract
-MFnumb = None   #Number of midfielders to extract
-FWnumb = None   #Number of forwards to extract
+#DFnumb = None   #Number of defenders to extract
+#MFnumb = None   #Number of midfielders to extract
+#FWnumb = None   #Number of forwards to extract
+rand_staff = None  #Tells whether to randomize the staff
+
+#Check whether the player is already in the team
+def CheckDuplicate(player):
+    alreadyIn = []
+    for p in playerList:
+        alreadyIn.append(p.name)
+    return (player.name in alreadyIn)
 
 #Add a random player to the team
-def GetRandomPlayer(list):
-    index = random.randrange(len(list)-1)
-    while list[index] in playerList:
-        index = random.randrange(len(list)-1)
-    playerList.append(list[index])
+def GetRandomPlayer(sheet, arch):
+    index = random.randrange(1, sheet.max_row)
+    p = OC(sheet[f"D{index}"].value, sheet[f"C{index}"].value, sheet[f"E{index}"].value, arch)
+    while CheckDuplicate(p):
+        index = random.randrange(1, sheet.max_row)
+        p = OC(sheet[f"D{index}"].value, sheet[f"C{index}"].value, sheet[f"E{index}"].value, arch)
+    playerList.append(p)
 
 #Add a random staff member
-def GetRandomStaff(list):
-    index = random.randrange(len(list)-1)
-    staffList.append(list[index])
+def GetRandomStaff(sheet, arch):
+    index = random.randrange(1,sheet.max_row)
+    s = OC(sheet[f"D{index}"].value, sheet[f"C{index}"].value, sheet[f"E{index}"].value, arch)
+    staffList.append(s)
 
 #Randomize the team
 def Randomize(DFn, MFn, FWn):
-    GetRandomPlayer(GK_list)
+    a = Archivio()
+    excel_file = openpyxl.load_workbook("IESL.xlsx")
+    GetRandomPlayer(excel_file['GKs'], a)
     for i in range(DFn):
-        GetRandomPlayer(DF_list)
+        GetRandomPlayer(excel_file['DFs'], a)
     for i in range(MFn):
-        GetRandomPlayer(MF_list)
+        GetRandomPlayer(excel_file['MFs'], a)
     for i in range(FWn):
-        GetRandomPlayer(FW_list)
-    GetRandomStaff(CO_list)
-    GetRandomStaff(MG_list)
+        GetRandomPlayer(excel_file['FWs'], a)
+    if rand_staff:
+        GetRandomStaff(excel_file['COs'], a)
+        GetRandomStaff(excel_file['MGs'], a)
+    excel_file.close()
+    a.close()
 
 #Show the randomized team in a new window
 def PrintTeam():
-    #Make a string with the team list
-    team = f'Players:\n'    #Team list string
-    for i in playerList:
-        team = team + i
-    team = team + f'\nStaff:\n'
-    for i in staffList:
-        team = team + i
-
-    #Make a top level window with the team list
     teamPage = Toplevel(root)
     teamPage.title("Your team")
-    showTeam = Text(teamPage)
-    showTeam.pack()
-    showTeam.insert(END, team)
-    showTeam.config(state="disabled")
+    Label(teamPage, text="Players:").grid(row=0, column=0)
+    i = 1
+    for player in playerList:
+        Label(teamPage, text=player.name).grid(row=i,column=0)
+        Label(teamPage, text=f'({player.team})').grid(row=i,column=1)
+        if(player.image not in ['N/A', '#VALUE!']):
+            Label(teamPage, image=player.image).grid(row=i,column=2)
+        i=i+1
+    if(rand_staff):
+        Label(teamPage, text="Staff:").grid(row=i, column=0)
+        i=i+1
+        for staff in staffList:
+            Label(teamPage, text=staff.name).grid(row=i,column=0)
+            Label(teamPage, text=f'({staff.team})').grid(row=i,column=1)
+            if(staff.image not in ['N/A', '#VALUE!']):
+                Label(teamPage, image=staff.image).grid(row=i,column=2)
+            i=i+1
     teamPage.mainloop()
 
-#design window
+#Design window
 root = Tk()
 root.title("IESL Randomizer")
-root.geometry("400x300")
+root.geometry("600x400")
+root.iconphoto(True, PhotoImage("Logo", file="logo.png"))
 
 titleLabel = Label(root, text="IESL Randomizer (made by Iper)", height=2).pack()
 introLabel = Label(root, text="Welcome to the IESL Randomizer!").pack(anchor='w')
 instructionLabel = Label(root, text="Input the formation").pack(anchor='w')
 
 inputFrame = Frame(root)
-DFlabel = Label(inputFrame, text="Defenders:").grid(row=0,column=0)
-MFlabel = Label(inputFrame, text="Midfielders:").grid(row=1,column=0)
-FWlabel = Label(inputFrame, text="Forwards:").grid(row=2,column=0)
+Label(inputFrame, text="Defenders:").grid(row=0,column=0)
+Label(inputFrame, text="Midfielders:").grid(row=1,column=0)
+Label(inputFrame, text="Forwards:").grid(row=2,column=0)
+Label(inputFrame, text="Randomize staff").grid(row=3,column=0)
 DFnumb_var = IntVar(inputFrame)
 MFnumb_var = IntVar(inputFrame)
 FWnumb_var = IntVar(inputFrame)
-DFinput = Entry(inputFrame, textvariable=DFnumb_var).grid(row=0, column=1)
-MFinput = Entry(inputFrame, textvariable=MFnumb_var).grid(row=1, column=1)
-FWinput = Entry(inputFrame, textvariable=FWnumb_var).grid(row=2, column=1)
+staff_var = BooleanVar(inputFrame)
+Entry(inputFrame, textvariable=DFnumb_var).grid(row=0, column=1)
+Entry(inputFrame, textvariable=MFnumb_var).grid(row=1, column=1)
+Entry(inputFrame, textvariable=FWnumb_var).grid(row=2, column=1)
+Checkbutton(inputFrame, variable=staff_var).grid(row=3, column=1)
 inputFrame.pack(anchor='w')
 
 #Start the randomization
 def StartRandomize():
     playerList.clear()
     staffList.clear()
-    DFnumb = DFnumb_var.get()
-    MFnumb = MFnumb_var.get()
-    FWnumb = FWnumb_var.get()
-    Randomize(DFnumb, MFnumb, FWnumb)
+    #DFnumb = DFnumb_var.get()
+    #MFnumb = MFnumb_var.get()
+    #FWnumb = FWnumb_var.get()
+    global rand_staff
+    rand_staff = staff_var.get()
+    Randomize(DFnumb_var.get(), MFnumb_var.get(), FWnumb_var.get())
     PrintTeam()
     
-
-
-randomizeButton = Button(root, text="Randomize!", background="Orange", command=StartRandomize).pack(anchor="w")
+Button(root, text="Randomize!", background="Orange", command=StartRandomize).pack(anchor="w")
 root.mainloop()
-
